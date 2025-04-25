@@ -112,16 +112,15 @@ def cancel(update: Update, context: CallbackContext):
 # ───────────────────────────────────────────── #
 # Main
 # ───────────────────────────────────────────── #
-def main():
+def start_bot():
     updater = Updater(BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    # Command Handlers
+    # All handlers...
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("generate_email", generate_email))
 
-    # Conversation Handler for Phone Number
     phone_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("generate_phone", generate_phone_start)],
         states={
@@ -129,11 +128,9 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)]
     )
-
     dp.add_handler(phone_conv_handler)
 
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
-    main()
+
