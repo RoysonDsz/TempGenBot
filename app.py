@@ -228,22 +228,19 @@ def cancel_operation(operation_id):
         return jsonify({"status": "cancelled"})
     return jsonify({"error": "Operation not found"}), 404
 
-# Importing bot webhook handler but not initializing bot polling
-from bot import process_update
-
-# Set up Telegram webhook route
+# Telegram webhook handler
 @app.route('/webhook', methods=['POST'])
 def webhook():
     if request.method == 'POST':
         update_json = request.get_json(force=True)
         bot = Bot(token=BOT_TOKEN)
+        # Import process_update function only when needed 
+        from bot import process_update
         process_update(update_json, bot)
         return {"status": "ok"}
 
-# Route to set up webhook
 @app.route('/set_webhook', methods=['GET'])
 def set_webhook():
-    from telegram import Bot
     webhook_url = os.getenv("WEBHOOK_URL", "https://your-app-url.com/webhook")
     bot = Bot(token=BOT_TOKEN)
     result = bot.set_webhook(webhook_url)
@@ -252,7 +249,8 @@ def set_webhook():
         return jsonify({"status": "success", "message": f"Webhook set to {webhook_url}"})
     else:
         return jsonify({"status": "error", "message": "Failed to set webhook"}), 500
-
+    
 # Only start the Flask app when running app.py directly
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, threaded=True)
