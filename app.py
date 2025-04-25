@@ -53,7 +53,7 @@ def poll_inbox(temp_email):
         # Initialize status as "waiting"
         operation_status[temp_email] = "waiting"
         
-        for _ in range(90):  # Poll for 15 minutes (90 * 10s = 900s = 15min)
+        for _ in range(15):  # Poll for 15 minutes (90 * 10s = 900s = 15min)
             # Check if operation has been cancelled
             if operation_status.get(temp_email) == "cancelled":
                 print(f"📧 Polling cancelled for {temp_email}")
