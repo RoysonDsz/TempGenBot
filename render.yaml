@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tempgen-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT main:flask_app
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: TEMP_MAIL_API_KEY
+        sync: false
+      - key: VIRTUAL_NUMBER_API_KEY
+        sync: false
+      - key: WEBHOOK_URL
+        fromService:
+          type: web
+          name: tempgen-bot
+          envVarKey: RENDER_EXTERNAL_URL

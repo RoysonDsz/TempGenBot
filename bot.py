@@ -3,23 +3,23 @@ import os
 import requests
 import time
 from dotenv import load_dotenv
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove 
 from telegram.ext import (
-    Updater, CommandHandler, MessageHandler, Filters,
-    CallbackContext, ConversationHandler
+    CommandHandler, MessageHandler, Filters, CallbackContext,
+    ConversationHandler, Dispatcher
 )
 
 # Load environment variables
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Define API base URL
-API_BASE_URL = "http://localhost:5000"  # Change to your server URL if needed
+# Define API base URL - use an environment variable to allow different deployment locations
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:5000")
 
 # Define states for conversation
 WAITING_FOR_COUNTRY = 1
 
-# Define cancellation signal
+# Dictionary to store active sessions
 active_sessions = {}
 
 # ───────────────────────────────────────────── #
@@ -128,7 +128,6 @@ def generate_email(update: Update, context: CallbackContext):
         # Clear session
         if user_id in active_sessions:
             del active_sessions[user_id]
-
 
 # ───────────────────────────────────────────── #
 # Generate Phone Number (Conversation)
@@ -292,23 +291,19 @@ def error_handler(update, context):
     """Log errors caused by Updates."""
     print(f"Error occurred: {context.error}")
 
-# ───────────────────────────────────────────── #
-# Main
-# ───────────────────────────────────────────── #
-def start_bot():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
+# Process webhook updates
+def process_update(update_json, bot):
+    """Process incoming webhook update."""
+    update = Update.de_json(update_json, bot)
+    dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
     
-    # Register error handler
-    dp.add_error_handler(error_handler)
+    # Register handlers
+    dispatcher.add_error_handler(error_handler)
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("generate_email", generate_email))
+    dispatcher.add_handler(CommandHandler("cancel", cancel_command))
 
-    # Basic handlers
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(CommandHandler("generate_email", generate_email))
-    dp.add_handler(CommandHandler("cancel", cancel_command))
-
-    # Phone conversation handler
     phone_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("generate_phone", generate_phone_start)],
         states={
@@ -319,8 +314,7 @@ def start_bot():
         },
         fallbacks=[CommandHandler("cancel", cancel_conversation)]
     )
-    dp.add_handler(phone_conv_handler)
+    dispatcher.add_handler(phone_conv_handler)
 
-    # Start the Bot (with drop_pending_updates to avoid conflict)
-    updater.start_polling(drop_pending_updates=True)
-    updater.idle()
+    # Process the update
+    dispatcher.process_update(update)

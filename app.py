@@ -5,6 +5,7 @@ import time
 import threading
 import os
 from dotenv import load_dotenv
+from telegram import Bot
 
 load_dotenv()
 app = Flask(__name__)
@@ -12,6 +13,7 @@ app = Flask(__name__)
 # Load environment variables
 TEMP_MAIL_API_KEY = os.getenv("TEMP_MAIL_API_KEY")
 VIRTUAL_NUMBER_API_KEY = os.getenv("VIRTUAL_NUMBER_API_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Temp-Mail API setup
 TEMP_MAIL_API_HOST = "temp-mail44.p.rapidapi.com"
@@ -226,6 +228,31 @@ def cancel_operation(operation_id):
         return jsonify({"status": "cancelled"})
     return jsonify({"error": "Operation not found"}), 404
 
-# ------------------- RUNNING THE SERVER ------------------- #
+# Importing bot webhook handler but not initializing bot polling
+from bot import process_update
+
+# Set up Telegram webhook route
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.method == 'POST':
+        update_json = request.get_json(force=True)
+        bot = Bot(token=BOT_TOKEN)
+        process_update(update_json, bot)
+        return {"status": "ok"}
+
+# Route to set up webhook
+@app.route('/set_webhook', methods=['GET'])
+def set_webhook():
+    from telegram import Bot
+    webhook_url = os.getenv("WEBHOOK_URL", "https://your-app-url.com/webhook")
+    bot = Bot(token=BOT_TOKEN)
+    result = bot.set_webhook(webhook_url)
+    
+    if result:
+        return jsonify({"status": "success", "message": f"Webhook set to {webhook_url}"})
+    else:
+        return jsonify({"status": "error", "message": "Failed to set webhook"}), 500
+
+# Only start the Flask app when running app.py directly
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, threaded=True)

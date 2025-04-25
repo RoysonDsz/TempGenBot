@@ -1,12 +1,14 @@
 # main.py (Main script)
-import threading
+import os
 import signal
 import sys
+from dotenv import load_dotenv
+from telegram import Bot
 from app import app as flask_app
-from bot import start_bot
 
-def run_flask():
-    flask_app.run(host="0.0.0.0", port=5000, threaded=True)
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 def signal_handler(sig, frame):
     print('Exiting gracefully...')
@@ -17,13 +19,15 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    # Start Flask in a daemon thread
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    
-    # Start Telegram bot (blocking)
+    # Set the webhook when starting
     try:
-        start_bot()
-    except KeyboardInterrupt:
-        print("Shutting down...")
-        sys.exit(0)
+        bot = Bot(token=BOT_TOKEN)
+        print(f"Setting webhook to {WEBHOOK_URL}")
+        bot.set_webhook(WEBHOOK_URL)
+        print("Webhook set successfully")
+    except Exception as e:
+        print(f"Failed to set webhook: {e}")
+    
+    # Start Flask app
+    print("Starting Flask server...")
+    flask_app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), threaded=True)
